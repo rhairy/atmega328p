@@ -1,6 +1,8 @@
 GCC_VERSION="7.1.0"
 BINUTILS_VERSION="2.28"
 
+ENABLE_LANGUAGES="ada"
+
 GCC_ARCHIVE="gcc-$GCC_VERSION.tar.gz"
 BINUTILS_ARCHIVE="binutils-$BINUTILS_VERSION.tar.gz"
 
@@ -10,7 +12,7 @@ BINUTILS_SRC_DIR="binutils-$BINUTILS_VERSION"
 GCC_OBJ_DIR="gcc-$GCC_VERSION-obj"
 
 SOURCE_DIR="$(pwd)/src"
-PREFIX_DIR="$HOME/bld"
+PREFIX_DIR="$(pwd)/bld"
 
 # Checks the return status of the last executed command.
 # Input $1: This should be the name of the command whose exit status is being checked.
@@ -81,7 +83,7 @@ check_return_status "make install" "eq" 0
 # Build Native GCC
 mkdir "$SOURCE_DIR/$GCC_OBJ_DIR"
 cd "$SOURCE_DIR/$GCC_OBJ_DIR"
-../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada
+../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=$ENABLE_LANGUAGES
 check_return_status "configure" "eq" 0
 make
 check_return_status "make" "eq" 0
@@ -90,8 +92,8 @@ check_return_status "make install" "eq" 0
 
 # Change PATH to include newly built GCC and Binutils
 TMP=$PATH
-PATH=$PREFIX_DIR/bin:$TMP
-CC=$PREFIX_DIR/bin/gcc
+export PATH=$PREFIX_DIR/bin:$TMP
+export CC=$PREFIX_DIR/bin/gcc
 
 # Build Binutils and GCC targeted for AVR.
 cd $SOURCE_DIR
@@ -110,7 +112,7 @@ cd $SOURCE_DIR/$GCC_OBJ_DIR
 check_return_status "cd" "eq" 0
 rm -rf ./*
 
-../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada --target=avr --disable-libada
+../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=$ENABLE_LANGUAGES --target=avr --disable-libada
 check_return_status "configure" "eq" 0
 make
 check_return_status "make" "eq" 0
