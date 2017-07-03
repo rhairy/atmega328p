@@ -2,10 +2,7 @@ GCC_VERSION="7.1.0"
 BINUTILS_VERSION="2.28"
 AVRC_VERSION="2.0.0"
 
-<<<<<<< HEAD
 AVRC_ARCHIVE="avr-libc-$AVRC_VERSION.tar.bz2"
-=======
->>>>>>> bad215e1c8c5dc29f4676312c346fabced043f0b
 GCC_ARCHIVE="gcc-$GCC_VERSION.tar.gz"
 BINUTILS_ARCHIVE="binutils-$BINUTILS_VERSION.tar.gz"
 
@@ -15,13 +12,10 @@ BINUTILS_SRC_DIR="binutils-$BINUTILS_VERSION"
 
 GCC_OBJ_DIR="gcc-$GCC_VERSION-obj"
 
-<<<<<<< HEAD
 ROOT_DIR="$(pwd)"
 SOURCE_DIR="$ROOT_DIR/src"
 PREFIX_DIR="$ROOT_DIR/bld"
 LOG_DIR="$ROOT_DIR/log"
-=======
->>>>>>> bad215e1c8c5dc29f4676312c346fabced043f0b
 
 ERROR_STATE=0
 
@@ -102,7 +96,6 @@ if [ $ERROR_STATE -ne 0 ]
     exit -1
 fi
 
-<<<<<<< HEAD
 # PHASE2: Build native binutils.
 if [ ! -e $LOG_DIR/phase2.success ]
   then
@@ -140,33 +133,10 @@ if [ ! -e $LOG_DIR/phase3.success ]
   fi
   touch $LOG_DIR/phase3.success
 fi
-=======
-# Build native binutils.
-cd "$SOURCE_DIR/$BINUTILS_SRC_DIR"
-./configure --prefix=$PREFIX_DIR
-check_return_status "configure" "eq" 0
-make
-check_return_status "make" "eq" 0
-make install
-check_return_status "make install" "eq" 0
-
-# Build Native GCC
-mkdir "$SOURCE_DIR/$GCC_OBJ_DIR"
-cd "$SOURCE_DIR/$GCC_OBJ_DIR"
-../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=$ENABLE_LANGUAGES
-check_return_status "configure" "eq" 0
-make
-check_return_status "make" "eq" 0
-make install
-check_return_status "make install" "eq" 0
->>>>>>> bad215e1c8c5dc29f4676312c346fabced043f0b
 
 # Change PATH to include newly built GCC and Binutils
 TMP=$PATH
 export PATH=$PREFIX_DIR/bin:$TMP
-<<<<<<< HEAD
-=======
->>>>>>> bad215e1c8c5dc29f4676312c346fabced043f0b
 
 # PHASE4: Build Binutils targeted to AVR.
 cd $SOURCE_DIR
@@ -174,7 +144,6 @@ rm -rf ./$BINUTILS_SRC_DIR
 tar -xf $BINUTILS_ARCHIVE
 cd $BINUTILS_SRC_DIR
 
-<<<<<<< HEAD
 if [ ! -e $LOG_DIR/phase4.success ]
   then
   ./configure --prefix=$PREFIX_DIR --target=avr 2>&1 | tee $LOG_DIR/phase4.log
@@ -231,5 +200,3 @@ if [ ! -e $LOG_DIR/phase6.success ]
   fi
   touch $LOG_DIR/phase6.success
 fi
-=======
->>>>>>> bad215e1c8c5dc29f4676312c346fabced043f0b
