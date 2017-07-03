@@ -16,6 +16,7 @@ ROOT_DIR="$(pwd)"
 SOURCE_DIR="$ROOT_DIR/src"
 PREFIX_DIR="$ROOT_DIR/bld"
 LOG_DIR="$ROOT_DIR/log"
+BIN_DIR="$PREFIX_DIR/bin"
 
 ERROR_STATE=0
 
@@ -66,6 +67,7 @@ if [ ! -d $LOG_DIR ]
 fi
 
 # PHASE1: Download and extract sources.
+PHASE=1
 if [ ! -e "$BINUTILS_ARCHIVE" ]
   then
   wget https://ftp.gnu.org/gnu/binutils/$BINUTILS_ARCHIVE
@@ -96,107 +98,74 @@ if [ $ERROR_STATE -ne 0 ]
     exit -1
 fi
 
-# PHASE2: Build native binutils.
-if [ ! -e $LOG_DIR/phase2.success ]
-  then
-  cd "$SOURCE_DIR/$BINUTILS_SRC_DIR"
-  ./configure --prefix=$PREFIX_DIR 2>&1 | tee $LOG_DIR/phase2.log
-  make 2>&1 | tee -a $LOG_DIR/phase2.log
-  check_return_status "eq" 0
-  make install 2>&1 | tee -a $LOG_DIR/phase2.log
-  check_return_status "eq" 0
-
-  if [ $ERROR_STATE -ne 0 ]
-    then
-    echo "Phase2 Failed."
-    exit -1
-  fi
-  touch $LOG_DIR/phase2.success
-fi
-
-
-# PHASE3:  Build Native GCC
-if [ ! -e $LOG_DIR/phase3.success ]
-  then
-  cd "$SOURCE_DIR/$GCC_OBJ_DIR"
-  ../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada  2>&1 | tee $LOG_DIR/phase3.log
-  check_return_status "eq" 0
-  make 2>&1 | tee $LOG_DIR/phase3.log
-  check_return_status "eq" 0
-  make install 2>&1 | tee $LOG_DIR/phase3.log
-  check_return_status "eq" 0
-
-  if [ $ERROR_STATE -ne 0 ]
-    then
-    echo "Phase3 Failed."
-    exit -1
-  fi
-  touch $LOG_DIR/phase3.success
-fi
-
 # Change PATH to include newly built GCC and Binutils
-TMP=$PATH
-export PATH=$PREFIX_DIR/bin:$TMP
+export PATH="$PATH:$BIN_DIR"
 
-# PHASE4: Build Binutils targeted to AVR.
+# PHASE2: Build Binutils targeted to AVR.
+PHASE=2
 cd $SOURCE_DIR
 rm -rf ./$BINUTILS_SRC_DIR
 tar -xf $BINUTILS_ARCHIVE
 cd $BINUTILS_SRC_DIR
 
-if [ ! -e $LOG_DIR/phase4.success ]
+if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
   then
-  ./configure --prefix=$PREFIX_DIR --target=avr 2>&1 | tee $LOG_DIR/phase4.log
+  ./configure --prefix=$PREFIX_DIR --target=avr 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
-  make 2>&1 | tee -a $LOG_DIR/phase4.log
+  make 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
-  make install 2>&1 | tee -a $LOG_DIR/phase4.log
+  make install 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
 
   if [ $ERROR_STATE -ne 0 ]
     then
-    echo "Phase4 Failed."
+    make clean
+    echo "Phase$PHASE Failed."
     exit -1
   fi
-  touch $LOG_DIR/phase4.success
+  touch "$LOG_DIR/phase$PHASE.success"
 fi
 
 # PHASE5: Build GCC targeted to AVR.
-if [ ! -e $LOG_DIR/phase5.success ]
+PHASE=3
+if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
   then
   cd $SOURCE_DIR/$GCC_OBJ_DIR
   check_return_status "cd" "eq" 0
   rm -rf ./*
 
-  ../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada --target=avr --disable-libada 2>&1 | tee $LOG_DIR/phase5.log
+  ../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada --target=avr --disable-libada 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
-  make 2>&1 | tee -a $LOG_DIR/phase5.log
+  make 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
-  make install 2>&1 | tee -a $LOG_DIR/phase5.log
+  make install 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
   if [ $ERROR_STATE -ne 0 ]
     then
-    echo "Phase5 Failed."
+    make clean
+    echo "Phase$PHASE Failed."
     exit -1
   fi
-  touch $LOG_DIR/phase5.success
+  touch $LOG_DIR/phase$PHASE.success
 fi
 
 # PHASE6: Build avrlibc.
+PHASE=4
 export CC="$PREFIX_DIR/bin/avr-gcc"
-if [ ! -e $LOG_DIR/phase6.success ]
+if [ ! -e $LOG_DIR/phase$PHASE.success ]
   then
   cd $SOURCE_DIR/$AVRC_SRC_DIR
-  ./configure --prefix=$PREFIX_DIR --host=avr --build=`./config.guess` 2>&1 | tee $LOG_DIR/phase6.log
+  ./configure --prefix=$PREFIX_DIR --host=avr --build=`./config.guess` 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
-  make 2>&1 | tee -a $LOG_DIR/phase6.log
+  make 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
-  make install 2>&1 | tee -a $LOG_DIR/phase6.log
+  make install 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
   if [ $ERROR_STATE -ne 0 ]
     then
-    echo "Phase6 Failed."
+    make clean
+    echo "Phase$PHASE Failed."
     exit -1
   fi
-  touch $LOG_DIR/phase6.success
+  touch $LOG_DIR/phase$PHASE.success
 fi
