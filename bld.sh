@@ -14,11 +14,13 @@ GCC_OBJ_DIR="gcc-$GCC_VERSION-obj"
 
 ROOT_DIR="$(pwd)"
 SOURCE_DIR="$ROOT_DIR/src"
-PREFIX_DIR="$ROOT_DIR/bld"
+PREFIX_DIR="$ROOT_DIR"
 LOG_DIR="$ROOT_DIR/log"
 BIN_DIR="$PREFIX_DIR/bin"
 
 ERROR_STATE=0
+
+PHASE=0
 
 # Checks the return status of the last executed command and sets the ERROR_STAE as appropriate.
 # Input $1: This should be a string value "eq", "ne", "lt", or "gt".
@@ -54,62 +56,60 @@ if [ ! -d $SOURCE_DIR ]
   mkdir $SOURCE_DIR
 fi
 
-cd $SOURCE_DIR
-
-if [ ! -d "$GCC_OBJ_DIR" ]
-  then
-  mkdir "$GCC_OBJ_DIR"
-fi
-
 if [ ! -d $LOG_DIR ]
   then
   mkdir $LOG_DIR
 fi
 
 # PHASE1: Download and extract sources.
-PHASE=1
-if [ ! -e "$BINUTILS_ARCHIVE" ]
+PHASE=$(($PHASE + 1))
+if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
   then
-  wget https://ftp.gnu.org/gnu/binutils/$BINUTILS_ARCHIVE
+  cd $SOURCE_DIR
+  if [ ! -e "$BINUTILS_ARCHIVE" ]
+    then
+    wget https://ftp.gnu.org/gnu/binutils/$BINUTILS_ARCHIVE
+    check_return_status "eq" 0
+  fi
   check_return_status "eq" 0
-fi
-tar -xf $BINUTILS_ARCHIVE
-check_return_status "eq" 0
 
-if [ ! -e "$GCC_ARCHIVE" ]
-  then
-  wget ftp://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-$GCC_VERSION/$GCC_ARCHIVE
+  if [ ! -e "$GCC_ARCHIVE" ]
+    then
+    wget ftp://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-$GCC_VERSION/$GCC_ARCHIVE
+    check_return_status "eq" 0
+  fi
   check_return_status "eq" 0
-fi
-tar -xf $GCC_ARCHIVE
-check_return_status "eq" 0
 
-if [ ! -e "$AVRC_ARCHIVE" ]
-  then
-  wget http://download.savannah.gnu.org/releases/avr-libc/$AVRC_ARCHIVE
+  if [ ! -e "$AVRC_ARCHIVE" ]
+    then
+    wget http://download.savannah.gnu.org/releases/avr-libc/$AVRC_ARCHIVE
+    check_return_status "eq" 0
+  fi
   check_return_status "eq" 0
-fi
-tar -xf $AVRC_ARCHIVE
-check_return_status "eq" 0
 
-if [ $ERROR_STATE -ne 0 ]
-  then
-    echo "Phase1 Failed."
+  if [ $ERROR_STATE -ne 0 ]
+    then
+    echo "Phase$PHASE Failed."
     exit -1
+  fi
+  touch "$LOG_DIR/phase$PHASE.success"
 fi
 
 # Change PATH to include newly built GCC and Binutils
 export PATH="$PATH:$BIN_DIR"
 
 # PHASE2: Build Binutils targeted to AVR.
-PHASE=2
-cd $SOURCE_DIR
-rm -rf ./$BINUTILS_SRC_DIR
-tar -xf $BINUTILS_ARCHIVE
-cd $BINUTILS_SRC_DIR
+PHASE=$(($PHASE + 1))
 
 if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
   then
+  cd $SOURCE_DIR
+  if [ -d ./$BINUTILS_SRC_DIR ]
+    then
+    rm -rf ./$BINUTILS_SRC_DIR
+  fi
+  tar -xf $BINUTILS_ARCHIVE
+  cd $BINUTILS_SRC_DIR
   ./configure --prefix=$PREFIX_DIR --target=avr 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
   make 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
@@ -127,12 +127,17 @@ if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
 fi
 
 # PHASE5: Build GCC targeted to AVR.
-PHASE=3
+PHASE=$(($PHASE + 1))
+cd $SOURCE_DIR
 if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
   then
+  if [ -d $SOURCE_DIR/$GCC_OBJ_DIR ]
+    then
+    rm -rf $SOURCE_DIR/$GCC_OBJ_DIR
+  fi
+  tar -xf $GCC_ARCHIVE
+  mkdir $SOURCE_DIR/$GCC_OBJ_DIR
   cd $SOURCE_DIR/$GCC_OBJ_DIR
-  check_return_status "cd" "eq" 0
-  rm -rf ./*
 
   ../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada --target=avr --disable-libada 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
@@ -150,10 +155,16 @@ if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
 fi
 
 # PHASE6: Build avrlibc.
-PHASE=4
+PHASE=$(($PHASE + 1))
 export CC="$PREFIX_DIR/bin/avr-gcc"
 if [ ! -e $LOG_DIR/phase$PHASE.success ]
   then
+  if [ -d $SOURCE_DIR/$AVRC_SRC_DIR ]
+    then
+    rm -rf $SOURCE_DIR/$AVRC_SRC_DIR
+  fi
+  cd $SOURCE_DIR
+  tar -xf $AVRC_ARCHIVE
   cd $SOURCE_DIR/$AVRC_SRC_DIR
   ./configure --prefix=$PREFIX_DIR --host=avr --build=`./config.guess` 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
