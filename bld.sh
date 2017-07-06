@@ -22,6 +22,8 @@ ERROR_STATE=0
 
 PHASE=0
 
+ENABLE_LANGUAGES="c"
+
 # Checks the return status of the last executed command and sets the ERROR_STAE as appropriate.
 # Input $1: This should be a string value "eq", "ne", "lt", or "gt".
 # Input $2: This should be an integer value that along with $2 will indicate whether the program has exited successfully.
@@ -139,7 +141,7 @@ if [ ! -e "$LOG_DIR/phase$PHASE.success" ]
   mkdir $SOURCE_DIR/$GCC_OBJ_DIR
   cd $SOURCE_DIR/$GCC_OBJ_DIR
 
-  ../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --disable-multilib --enable-languages=c,c++,ada --target=avr --disable-libada 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
+  ../$GCC_SRC_DIR/configure --prefix=$PREFIX_DIR --enable-languages=$ENABLE_LANGUAGES --disable-nls --disable-libssp --with-dwarf2 --target=avr --disable-libada 2>&1 | tee "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
   make 2>&1 | tee -a "$LOG_DIR/phase$PHASE.log"
   check_return_status "eq" 0
